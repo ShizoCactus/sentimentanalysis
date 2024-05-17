@@ -5,42 +5,52 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 class LogisticRegressionModel:
-    def __init__(self, x_train, x_test, y_train, y_test, n, vectortype='count'):
-        self.X_train = x_train
-        self.X_test = x_test
-        self.y_train = y_train
-        self.y_test = y_test
-        self.n = n
-        self.vectortype = vectortype
-        self.y_pred_ngrams = None
+    def __init__(self, x_train, x_test, y_train, y_test=None, n=1, vectortype='count'):
+        # Инициализация модели логистической регрессии
+        self.X_train = x_train  # Обучающая выборка
+        self.X_test = x_test  # Тестовая выборка
+        self.y_train = y_train  # Метки обучающей выборки
+        self.y_test = y_test  # Метки тестовой выборки
+        self.x_train_vectorized = None  # Векторизованные обучающие данные
+        self.x_test_vectorized = None  # Векторизованные тестовые данные
+        self.n = n  # Размер n-грамм
+        self.vectortype = vectortype  # Тип векторизации ('count' или 'tfidf')
+        self.y_pred_ngrams = None  # Предсказанные метки
 
     def vectorize(self):
-        print('vectorizing ' + str(self.n) + '-gram...')
-        vectorizer = CountVectorizer(ngram_range=(self.n, self.n))
-        x_train_count_ngrams = vectorizer.fit_transform(self.X_train)
-        x_test_count_ngrams = vectorizer.transform(self.X_test)
-        return x_train_count_ngrams, x_test_count_ngrams
+        # Векторизация данных с использованием CountVectorizer
+        print('Векторизация ' + str(self.n) + '-грамм...')
+        vectorizer = CountVectorizer(ngram_range=(self.n, self.n))  # Инициализация CountVectorizer для n-грамм
+        self.x_train_vectorized = vectorizer.fit_transform(self.X_train)  # Векторизация обучающих данных
+        self.x_test_vectorized = vectorizer.transform(self.X_test)  # Векторизация тестовых данных
 
     def tfidf_vectorize(self):
-        print('TF-IDF vectorizing ' + str(self.n) + '-gram...')
-        tfidf_vectorizer = TfidfVectorizer(ngram_range=(self.n, self.n))
-        x_train_tfidf_ngrams = tfidf_vectorizer.fit_transform(self.X_train)
-        x_test_tfidf_ngrams = tfidf_vectorizer.transform(self.X_test)
-        return x_train_tfidf_ngrams, x_test_tfidf_ngrams
+        # Векторизация данных с использованием TfidfVectorizer
+        print('TF-IDF векторизация ' + str(self.n) + '-грамм...')
+        tfidf_vectorizer = TfidfVectorizer(ngram_range=(self.n, self.n))  # Инициализация TfidfVectorizer для n-грамм
+        self.x_train_vectorized = tfidf_vectorizer.fit_transform(self.X_train)  # Векторизация обучающих данных
+        self.x_test_vectorized = tfidf_vectorizer.transform(self.X_test)  # Векторизация тестовых данных
 
     def process(self):
+        # Процесс векторизации и обучения модели логистической регрессии
         if self.vectortype == 'tfidf':
-            x_train_ngrams, x_test_ngrams = self.tfidf_vectorize()
+            self.tfidf_vectorize()  # Векторизация с использованием TF-IDF
         else:
-            x_train_ngrams, x_test_ngrams = self.vectorize()
-        print('processing...')
-        lr = LogisticRegression(max_iter=1000)
-        lr.fit(x_train_ngrams, self.y_train)
-        self.y_pred_ngrams = lr.predict(x_test_ngrams)
+            self.vectorize()  # Векторизация с использованием CountVectorizer
+        print('Обработка...')
+        lr = LogisticRegression(max_iter=1000)  # Инициализация модели логистической регрессии
+        lr.fit(self.x_train_vectorized, self.y_train)  # Обучение модели
+        self.y_pred_ngrams = lr.predict(self.x_test_vectorized)  # Предсказание меток для тестовой выборки
+
+    def print_results(self):
+        # Вывод результатов предсказания для каждого тестового примера
+        for i in range(len(self.y_pred_ngrams)):
+            print(self.X_test[i] + ': ' + self.y_pred_ngrams[i])
 
     def report(self):
+        # Вывод отчета по классификации
         if self.vectortype == 'tfidf':
-            print("Classification Report for TF-IDF " + str(self.n) + '-gram:')
+            print("Отчет о классификации для TF-IDF " + str(self.n) + '-грамм:')
         else:
-            print("Classification Report for " + str(self.n) + '-gram:')
-        print(classification_report(self.y_test, self.y_pred_ngrams))
+            print("Отчет о классификации для " + str(self.n) + '-грамм:')
+        print(classification_report(self.y_test, self.y_pred_ngrams))  # Вывод метрик классификации
